@@ -2,18 +2,18 @@
 
 ## GOALS:
 1. Grab those XPs that were annotated from the C. virginica genome, grab their locations in the C. virginica genome
-2. Then for those gene family members with XPs that are annotated in other mollusc genomes I will blast their sequences to only the C. virginica genome
-and find the locations of the best hits.
-3. Merge regions with overlapping hits in BED files using bedtools so we get a consolidated file,
 4. Keep the family identifiers that Fabio assigned into the headers of all the proteins
 
-Making three separate tracks:
+Making 5 separate tracks:
 1. All C. virginica expanded, contracted and shared gene families
 2. Just the C. virginica expanded
 3. Just the C. virginica contracted
+4. Just the C. virginica shared contracted
+5. Just the C. virginica shared expanded
 
+################# FIRST Are the gene families in the shared files the same the in the C.virginica files? #######3
 
-QUESTION: within the regular_size_shared folder are regular_size_shared_exp and regular_size_shared_con. Are these duplicated in
+# QUESTION: within the regular_size_shared folder are regular_size_shared_exp and regular_size_shared_con. Are these duplicated in
 the regular_size_virginica_con and regular_size_virginica_exp
 
 # Script to do this
@@ -29,7 +29,9 @@ the regular_size_virginica_con and regular_size_virginica_exp
 
   -Download into R. Code saved in Compare_CAFE_Gene_Families.R
 
-  ## NO gene families are shared between the shared con and exp and the virginica con and exp, no overlapping
+  ## Conclusion: NO gene families are shared between the shared con and exp and the virginica con and exp, no overlapping
+
+#####################
 
 #1. GOAL: Grab those XPs that were annotated from the C. virginica genome, grab their locations in the C. virginica genome
 
@@ -55,331 +57,147 @@ the regular_size_virginica_con and regular_size_virginica_exp
     $ cd virginica_exp_IGV_tracks/
     $ cp ../original_virginica_exp_fasta/*.fa .
 
+
   #3. Subset the sequences that have been annotated to virginica and put those in separate folders in each directory
 
-    ##$ for file in *.fa; do filename=${file%.fa}; awk '/>virginica/{n=NR+1} n>=NR' $file >> $filename.fa.virginica; done
+    ## Original Approach: grab the header and the sequences, realized this was unnecessary though
 
-  #4. For those folders C. virginica sequences grep the protein ID in the GFF3 reference file and extract the position information on the chromosomes in the two relevant columns
+          $ for file in *.fa; do filename=${file%.fa}; awk '/>virginica/{n=NR+1} n>=NR' $file >> $filename.fa.virginica; done
 
-  # extract XP and use it in grep search
-    $ for file in *.fa.virginica; do
-      filename=${grep "^>" $file | sed -e 's/>virginica_\(.*\)_/\1/' | cut -d'_' -f 1,2}
-      grep "$filename" $P/ref_C_virginica-3.0_top_level.gff3' >> $filename.gff3.virginica
-      done
+      #For those folders C. virginica sequences grep the protein ID in the GFF3 reference file and extract the position information on the chromosomes in the two relevant columns
 
-      $ for file in *.fa.virginica; do
-        filename=${grep "^>" $file | sed -e 's/>virginica_\(.*\)_/\1/'}
-        grep "$filename" $P/ref_C_virginica-3.0_top_level.gff3' >> $filename.gff3.virginica
-        done
+        # extract XP and use it in grep search
+            $ for file in *.fa.virginica; do
+                filename=${grep "^>" $file | sed -e 's/>virginica_\(.*\)_/\1/' | cut -d'_' -f 1,2}
+                grep "$filename" $P/ref_C_virginica-3.0_top_level.gff3' >> $filename.gff3.virginica
+              done
 
-        # in each folder run the following command to add the family name to the end of the protein name
+              $ for file in *.fa.virginica; do
+                  filename=${grep "^>" $file | sed -e 's/>virginica_\(.*\)_/\1/'}
+                  grep "$filename" $P/ref_C_virginica-3.0_top_level.gff3' >> $filename.gff3.virginica
+                done
 
-        $for file in *.fa; do filename=${file%.fa};   sed -i -e "/>/ s/\$/_$filename/" "$file"; done
+                # in each folder run the following command to add the family name to the end of the protein name
 
-
-##### NEW APPROACH FOR CVIR ANNOTATED PROTEINS ####
-#just extract the header lines that have virginica in them from the original FA file wit the virginica, not needing the sequences really
-
-grep only lines with C. virginica
-
-$ for file in *.fa; do filename=${file%.fa}; grep 'virginica' $file | cut -d'_' -f 2,3 >> $filename.fa.virginica; done
-
-# Grep these protein sequences in GFF3 file
-
-$ for i in *.fa.virginica; do
-    if ! [ -f "$i" ]; then
-            continue
-        fi
-        while IFS= read -r line
-        do
-            grep "$line" /data3/marine_diseases_lab/shared/GCA_002022765.4_C_virginica-3.0_genomic.fna_index_reads/ref_C_virginica-3.0_top_level.gff3 | cut -f 1,4,5,9 >> $i.positions
-        done < "$i"
-     done
-
-# Add the filename with the fam ID at the end of every line
-
-  $ for f in *.fa.virginica.positions; do filename=${f%.fa.virginica.positions}; sed -i "s/$/\t$filename/" $f; done
-
-    # had mistake in command previously and need to now delete the last column for only the virginica_con and shared_exp
-
-      $ for f in *.fa.virginica.positions; do awk 'NF{NF--};1' $f > $f.fixed ; done
-       $ for f in *.fa.virginica.positions.fixed; do filename=${f%.fa.virginica.positions.fixed}; sed -i "s/$/\t$filename/" $f; done
-# Concatenate all the files in a folder
-      $ cat *.fa.virginica.positions.fixed > virginica_con_Cvir_XP_BED_info.txt
-# Keep only unique lines from files
-      $ sort virginica_con_Cvir_XP_BED_info.txt | uniq -c
-
-# Remove all of column 5 between ID= and protein_id=
-  # this below seems to have a glitch because some of them have a transl attached to the end
-
-$ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' virginica_exp_Cvir_XP_BED_info_unique.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' virginica_con_Cvir_XP_BED_info_unique.txt > virginica_con_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' shared_con_Cvir_XP_BED_info_unique.txt > shared_con_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' shared_exp_Cvir_XP_BED_info_unique.txt > shared_exp_Cvir_XP_BED_info_unique_shortened.txt
-
-# Remove ID=protein_id= from each
-
-$ sed -e "s/ID=protein_id=//g" -i virginica_exp_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e "s/ID=protein_id=//g" -i virginica_con_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e "s/ID=protein_id=//g" -i shared_con_Cvir_XP_BED_info_unique_shortened.txt
-$ sed -e "s/ID=protein_id=//g" -i shared_exp_Cvir_XP_BED_info_unique_shortened.txt
+                  $for file in *.fa; do filename=${file%.fa};   sed -i -e "/>/ s/\$/_$filename/" "$file"; done
 
 
-# some of the files have a weird "transl thing attached", remove that with the following command, re
+       ##### NEW APPROACH FOR CVIR ANNOTATED PROTEINS ####
+       #just extract the header lines that have virginica in them from the original FA file wit the virginica, not needing the sequences really
 
-$ awk '{split($5,a,/;/);$5=a[1]}1' virginica_exp_Cvir_XP_BED_info_unique_shortened.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened2.txt
-$ awk '{split($5,a,/;/);$5=a[1]}1' virginica_con_Cvir_XP_BED_info_unique_shortened.txt > virginica_con_Cvir_XP_BED_info_unique_shortened2.txt
-$ awk '{split($5,a,/;/);$5=a[1]}1' shared_con_Cvir_XP_BED_info_unique_shortened.txt > shared_con_Cvir_XP_BED_info_unique_shortened2.txt
-$ awk '{split($5,a,/;/);$5=a[1]}1' shared_exp_Cvir_XP_BED_info_unique_shortened.txt > shared_exp_Cvir_XP_BED_info_unique_shortened2.txt
+       #grep only lines with C. virginica
 
-# Convert each to tab separated
-  $ tr ' ' '\t' <virginica_exp_Cvir_XP_BED_info_unique_shortened2.txt >virginica_exp_Cvir_XP_BED_info_unique_shortened3.txt
-  $ tr ' ' '\t' <virginica_con_Cvir_XP_BED_info_unique_shortened2.txt >virginica_con_Cvir_XP_BED_info_unique_shortened3.txt
-  $ tr ' ' '\t' <shared_con_Cvir_XP_BED_info_unique_shortened2.txt >shared_con_Cvir_XP_BED_info_unique_shortened3.txt
-  $ tr ' ' '\t' <shared_exp_Cvir_XP_BED_info_unique_shortened2.txt >shared_exp_Cvir_XP_BED_info_unique_shortened3.txt
+          $ for file in *.fa; do filename=${file%.fa}; grep 'virginica' $file | cut -d'_' -f 2,3 >> $filename.fa.virginica; done
 
-# remove the first column
+      # Grep these protein sequences in GFF3 file
 
-  $ cut -f2,3,4,5,6 virginica_exp_Cvir_XP_BED_info_unique_shortened3.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened4.txt
-  $ cut -f2,3,4,5,6 virginica_con_Cvir_XP_BED_info_unique_shortened3.txt > virginica_con_Cvir_XP_BED_info_unique_shortened4.txt
-  $ cut -f2,3,4,5,6 shared_con_Cvir_XP_BED_info_unique_shortened3.txt > shared_con_Cvir_XP_BED_info_unique_shortened4.txt
-  $ cut -f2,3,4,5,6 shared_exp_Cvir_XP_BED_info_unique_shortened3.txt > shared_exp_Cvir_XP_BED_info_unique_shortened4.txt
+        $ for i in *.fa.virginica; do
+            if ! [ -f "$i" ]; then
+              continue
+            fi
+            while IFS= read -r line
+              do
+                grep "$line" /data3/marine_diseases_lab/shared/GCA_002022765.4_C_virginica-3.0_genomic.fna_index_reads/ref_C_virginica-3.0_top_level.gff3 | cut -f 1,4,5,9 >> $i.positions
+              done < "$i"
+          done
 
-# concatenate columns 4 and 5 by changing the separator
+          # Add the filename with the fam ID at the end of every line
 
-$ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' virginica_exp_Cvir_XP_BED_info_unique_shortened4.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened5.txt
-$ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' virginica_con_Cvir_XP_BED_info_unique_shortened4.txt > virginica_con_Cvir_XP_BED_info_unique_shortened5.txt
-$ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' shared_con_Cvir_XP_BED_info_unique_shortened4.txt> shared_con_Cvir_XP_BED_info_unique_shortened5.txt
-$ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' shared_exp_Cvir_XP_BED_info_unique_shortened4.txt> shared_exp_Cvir_XP_BED_info_unique_shortened5.txt
+            $ for f in *.fa.virginica.positions; do filename=${f%.fa.virginica.positions}; sed -i "s/$/\t$filename/" $f; done
 
-#Add track line to top of each as header via nano
-track name ="regular_size_virginica_exp" description="Virginica expanded" color="#00FF00" itemRgb="On" #gffTags
-track name ="regular_size_virginica_con" description="Virginica contracted" color="#FF0000" itemRgb="On" #gffTags
-track name ="regular_size_shared_con" description="Shared contracted" color="#9932CC" itemRgb="On" #gffTags
-track name ="regular_size_shared_exp" description="Shared expanded color="#6495ED" itemRgb="On" #gffTags
-track name ="all_shared_virginica" description="all shared virginica" color="#FF7F50" itemRgb="On" #gffTags
+            # had mistake in command previously and need to now delete the last column for only the virginica_con and shared_exp
 
-# Download data to local /Users/erinroberts/Documents/PhD_Research/Oyster_resequencing/CAFE_Annotation_Analysis_TracksCopy and paste into Excel in appropriate fields
+              $ for f in *.fa.virginica.positions; do awk 'NF{NF--};1' $f > $f.fixed ; done
+              $ for f in *.fa.virginica.positions.fixed; do filename=${f%.fa.virginica.positions.fixed}; sed -i "s/$/\t$filename/" $f; done
+          # Concatenate all the files in a folder
+              $ cat *.fa.virginica.positions.fixed > virginica_con_Cvir_XP_BED_info.txt
+        # Keep only unique lines from files
+                $ sort virginica_con_Cvir_XP_BED_info.txt | uniq -c
 
-211:CAFE_Annotation_Analysis_Tracks erinroberts$ pwd
-/Users/erinroberts/Documents/PhD_Research/Oyster_resequencing/CAFE_Annotation_Analysis_Tracks
-211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_virginica/regular_size_virginica_exp/virginica_exp_IGV_tracks/virginica_exp_Cvir_XP_BED_info_unique_shortened5.txt .
+                # Remove all of column 5 between ID= and protein_id=
+                # this below seems to have a glitch because some of them have a transl attached to the end (fixed)
+
+                $ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' virginica_exp_Cvir_XP_BED_info_unique.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' virginica_con_Cvir_XP_BED_info_unique.txt > virginica_con_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' shared_con_Cvir_XP_BED_info_unique.txt > shared_con_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e 's/\(ID=\).*\(protein_id=\)/\1\2/' shared_exp_Cvir_XP_BED_info_unique.txt > shared_exp_Cvir_XP_BED_info_unique_shortened.txt
+
+        # Remove ID=protein_id= from each
+
+                $ sed -e "s/ID=protein_id=//g" -i virginica_exp_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e "s/ID=protein_id=//g" -i virginica_con_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e "s/ID=protein_id=//g" -i shared_con_Cvir_XP_BED_info_unique_shortened.txt
+                $ sed -e "s/ID=protein_id=//g" -i shared_exp_Cvir_XP_BED_info_unique_shortened.txt
+
+        # some of the files have a weird "transl thing attached", remove that with the following command, re
+
+                $ awk '{split($5,a,/;/);$5=a[1]}1' virginica_exp_Cvir_XP_BED_info_unique_shortened.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened2.txt
+                $ awk '{split($5,a,/;/);$5=a[1]}1' virginica_con_Cvir_XP_BED_info_unique_shortened.txt > virginica_con_Cvir_XP_BED_info_unique_shortened2.txt
+                $ awk '{split($5,a,/;/);$5=a[1]}1' shared_con_Cvir_XP_BED_info_unique_shortened.txt > shared_con_Cvir_XP_BED_info_unique_shortened2.txt
+                $ awk '{split($5,a,/;/);$5=a[1]}1' shared_exp_Cvir_XP_BED_info_unique_shortened.txt > shared_exp_Cvir_XP_BED_info_unique_shortened2.txt
+
+        # Convert each to tab separated
+                $ tr ' ' '\t' <virginica_exp_Cvir_XP_BED_info_unique_shortened2.txt >virginica_exp_Cvir_XP_BED_info_unique_shortened3.txt
+                $ tr ' ' '\t' <virginica_con_Cvir_XP_BED_info_unique_shortened2.txt >virginica_con_Cvir_XP_BED_info_unique_shortened3.txt
+                $ tr ' ' '\t' <shared_con_Cvir_XP_BED_info_unique_shortened2.txt >shared_con_Cvir_XP_BED_info_unique_shortened3.txt
+                $ tr ' ' '\t' <shared_exp_Cvir_XP_BED_info_unique_shortened2.txt >shared_exp_Cvir_XP_BED_info_unique_shortened3.txt
+
+        # remove the first column
+
+                $ cut -f2,3,4,5,6 virginica_exp_Cvir_XP_BED_info_unique_shortened3.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened4.txt
+                $ cut -f2,3,4,5,6 virginica_con_Cvir_XP_BED_info_unique_shortened3.txt > virginica_con_Cvir_XP_BED_info_unique_shortened4.txt
+                $ cut -f2,3,4,5,6 shared_con_Cvir_XP_BED_info_unique_shortened3.txt > shared_con_Cvir_XP_BED_info_unique_shortened4.txt
+                $ cut -f2,3,4,5,6 shared_exp_Cvir_XP_BED_info_unique_shortened3.txt > shared_exp_Cvir_XP_BED_info_unique_shortened4.txt
+
+        # concatenate columns 4 and 5 by changing the separator
+
+                $ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' virginica_exp_Cvir_XP_BED_info_unique_shortened4.txt > virginica_exp_Cvir_XP_BED_info_unique_shortened5.txt
+                $ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' virginica_con_Cvir_XP_BED_info_unique_shortened4.txt > virginica_con_Cvir_XP_BED_info_unique_shortened5.txt
+                $ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' shared_con_Cvir_XP_BED_info_unique_shortened4.txt> shared_con_Cvir_XP_BED_info_unique_shortened5.txt
+                $ awk '{print $1"\t"$2"\t"$3"\t"$4"_"$5}' shared_exp_Cvir_XP_BED_info_unique_shortened4.txt> shared_exp_Cvir_XP_BED_info_unique_shortened5.txt
+
+        #Add track line to top of each as header via nano
+                track name ="regular_size_virginica_exp" description="Virginica expanded" color="#00FF00" itemRgb="On" #gffTags
+                track name ="regular_size_virginica_con" description="Virginica contracted" color="#FF0000" itemRgb="On" #gffTags
+                track name ="regular_size_shared_con" description="Shared contracted" color="#9932CC" itemRgb="On" #gffTags
+                track name ="regular_size_shared_exp" description="Shared expanded color="#6495ED" itemRgb="On" #gffTags
+                track name ="all_shared_virginica" description="all shared virginica" color="#FF7F50" itemRgb="On" #gffTags
+
+        # Download data to local /Users/erinroberts/Documents/PhD_Research/Oyster_resequencing/CAFE_Annotation_Analysis_TracksCopy and paste into Excel in appropriate fields
+
+            211:CAFE_Annotation_Analysis_Tracks erinroberts$ pwd
+            /Users/erinroberts/Documents/PhD_Research/Oyster_resequencing/CAFE_Annotation_Analysis_Tracks
+            211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_virginica/regular_size_virginica_exp/virginica_exp_IGV_tracks/virginica_exp_Cvir_XP_BED_info_unique_shortened5.txt .
                                                                                                                                                                                              100%   15MB  20.4MB/s   00:00
-211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_virginica/regular_size_virginica_con/virginica_con_IGV_tracks/virginica_con_Cvir_XP_BED_info_unique_shortened5.txt .
+            211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_virginica/regular_size_virginica_con/virginica_con_IGV_tracks/virginica_con_Cvir_XP_BED_info_unique_shortened5.txt .
                                                                                                                                                                                              100%   24KB   2.4MB/s   00:00
-211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_shared/regular_size_shared_con/shared_con_IGV_tracks/shared_con_Cvir_XP_BED_info_unique_shortened5.txt .
+            211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_shared/regular_size_shared_con/shared_con_IGV_tracks/shared_con_Cvir_XP_BED_info_unique_shortened5.txt .
                                                                                                                                                                                                100%   10MB  18.7MB/s   00:00
-211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_shared/regular_size_shared_exp/shared_exp_IGV_tracks/shared_exp_Cvir_XP_BED_info_unique_shortened5.txt .
+            211:CAFE_Annotation_Analysis_Tracks erinroberts$ scp erin_roberts@bluewaves:/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_shared/regular_size_shared_exp/shared_exp_IGV_tracks/shared_exp_Cvir_XP_BED_info_unique_shortened5.txt .
 
 
-# To make the track with all the shared and c.virginica, Concatenate all and add the shared track header below
+        # To make the track with all the shared and c.virginica, Concatenate all and add the shared track header below
 
-  $ for i in *shortened5.txt ; do cat $i >> combined_con_exp_Cvir_shortened5.txt ;done
-  #remove lines beginning with track names so that you just have the new shared track name at the top
-  $ sed -i '' '/^track/d' combined_con_exp_Cvir_shortened5.txt
-  $ nano combined_con_exp_Cvir_shortened5.txt
-    track name ="all_shared_virginica" description="all shared virginica" color="#FF7F50" itemRgb="On"
+            $ for i in *shortened5.txt ; do cat $i >> combined_con_exp_Cvir_shortened5.txt ;done
+            #remove lines beginning with track names so that you just have the new shared track name at the top
+              $ sed -i '' '/^track/d' combined_con_exp_Cvir_shortened5.txt
+              $ nano combined_con_exp_Cvir_shortened5.txt
+                track name ="all_shared_virginica" description="all shared virginica" color="#FF7F50" itemRgb="On"
 
-    # Put all in a single csv file all concatenated
-    for i in *shortened5.txt ; do cat $i >> ALL_combined_con_exp_Cvir_shortened.txt ;done
 
-# Change the file ending to be .bed for all the files
-  $ mv ALL_combined_con_exp_Cvir_shortened.txt ALL_combined_con_exp_Cvir_shortened.bed
+        # Change the file ending to be .bed for all the files
+            $ mv ALL_combined_con_exp_Cvir_shortened.txt ALL_combined_con_exp_Cvir_shortened.bed
 
-# Add #gffTags to the tracks lines header so the Name column will show up in gff format
+        # Add #gffTags to the tracks lines header so the Name column will show up in gff format
 
 # THESE ARE YOUR BED FILES!!
 
 #### OPENING THE FILES IN IGV SEPARATELY #####
 
-1. Downloading the genome.fasta file so I can look at them together
+1. Downloading the genome.fasta file GCF_002022765.2_C_virginica-3.0_genomic.fna
 
-## Not sure what this was used for:...removing XP? $ for file in *.fa.virginica; do filename=${file%.fa.virginica};   sed -i -e "/XP/ s/\$/_$filename/" "$file"; done
-
-
-########################### DONT NEED TO EVEN BE ANNOTATING THE NON C. VIRGINICA SEQUENCES ###########
-
-###### PROTOCOL FOR NON CVIR ANNOTATED PROTEINS THAT NEED TO BE BLASTED #####
-
-1. Remove virginica annotated sequences and the one line after them so that sequence was deleted as well
-
-$ cd shared_exp_IGV_tracks/
+2. Open the BED files separately
 
 
-$ for file in ../original_shared_exp_fasta/*.fa; do filename=${file%.fa}; sed '/>virginica/,+1 d' $file >> $filename.fa.NOT.virginica; done
-$ for file in ../original_virginica_exp_fasta/*.fa; do filename=${file%.fa}; sed '/>virginica/,+1 d' $file >> $filename.fa.NOT.virginica; done
-$ for file in ../original_virginica_con_fasta/*.fa; do filename=${file%.fa}; sed '/>virginica/,+1 d' $file >> $filename.fa.NOT.virginica; done
-$ for file in ../original_shared_con_fasta/*.fa; do filename=${file%.fa}; sed '/>virginica/,+1 d' $file >> $filename.fa.NOT.virginica; done
-
-
-  # move the files into IGV_tracks directory after doing this
-    $ mv ../original_virginica_con_fasta/*.NOT.virginica .
-
-2. Add the family ID's to the end of each sequence header
-
-$ for file in *.NOT.virginica; do filename=${file%.fa.NOT.virginica};   sed -i -e "/>/ s/\$/_$filename/" "$file"; done
-# did this for each of the four directories (shared con and exp, virginica con and exp)
-
-3. Align these protein sequences to the Cvir protein reference using Diamond (much faster than Blast!)
-
-  # see the github page for Diamond
-  # https://github.com/bbuchfink/diamond
-  $ module load DIAMOND/0.9.23-foss-2016b
-
-#Database needs to be made from a protein file
-
-  $ diamond makedb --in ./GCA_002022765.4_C_virginica-3.0_genomic.fna_index_reads/GCF_002022765.2_C_virginica-3.0_protein.faa -d cvir_protein_diamond
-
-
-  [erin_roberts@n001 shared] $ mkdir cvir_diamond_database
-[erin_roberts@n001 shared]$ mv nr.dmnd ./cvir_diamond_database/
-
-## SINGLE COMMANDS FOR CHECKING WHAT WORKS Script for performing alignments with diamond between protein sequences and protein database
-# going to put the output format in Blast format so that I can use previous scripts from Tejashree to grab the best hit, -outfmt 5 for BLAST xml format
-
-  $ diamond blastp -d /data3/marine_diseases_lab/shared/cvir_diamond_database/cvir_protein_diamond.dmnd -q fam1019_exp.fa.NOT.virginica -o fam1019_exp_NOT_virginica.xml --outfmt 5
-
-#  combine all the XML files
-
-  python /data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/blast_combine.py -o shared_exp_NOT_virginica_xml_combined ./*.xml
-
-# Extract annotations
-
-  $ python /data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/blast_extract_anno.py -i shared_exp_NOT_virginica_xml_combined -o shared_exp_NOT_virginica_xml_combined.csv -n 1
-
-#### SCRIPT TO DO THIS WITH ALL THE FILES IN THE FOLDER #####
-
-#!/bin/bash
-#SBATCH --job-name="diamond"
-#SBATCH --time=9999:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=20
-#SBATCH --output="diamond_XP_to_Cvir_families_2"
-#SBATCH --error="diamond_XP_to_Cvir_output_2"
-#SBATCH --mail-user=erin_roberts@my.uri.edu
-
-set -e
-echo "START $(date)"
-
-module load DIAMOND/0.9.23-foss-2016b
-module load python/2.7.10
-
-F=/data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/regular_size_shared/regular_size_shared_exp/shared_exp_IGV_tracks
-
-array1=($(ls $F/*.NOT.virginica))
-
-for i in ${array1[@]}; do
-  diamond blastp -d /data3/marine_diseases_lab/shared/cvir_diamond_database/cvir_protein_diamond.dmnd -q ${i} -o $(echo ${i}|sed "s/\..*//").xml --outfmt 5
-done
-
-#combine all the XML files
-
-python /data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/blast_combine.py -o shared_exp_NOT_virginica_xml_combined $F/*.xml
-
-# Extract annotations
-
-python /data3/marine_diseases_lab/erin/CAFE_Annotation_Analysis/blast_extract_anno.py -i shared_exp_NOT_virginica_xml_combined -o shared_exp_NOT_virginica_xml_combined.csv -n 1
-
-echo "Done" $(date)
-
-  # Remove lines that don't have a C.virginica annotation by grepping for "virginica"
-
-  $ grep "virginica" virginica_exp_NOT_virginica_xml_combined.csv > virginica_exp_NOT_virginica_xml_combined_Cvir_hit.csv
-  $ grep "virginica" virginica_con_NOT_virginica_xml_combined.csv > virginica_con_NOT_virginica_xml_combined_Cvir_hit.csv
-  $ grep "virginica" shared_exp_NOT_virginica_xml_combined.csv > shared_exp_NOT_virginica_xml_combined_Cvir_hit.csv
-  $ grep "virginica" shared_con_NOT_virginica_xml_combined.csv > shared_con_NOT_virginica_xml_combined_Cvir_hit.csv
-
-  # Need to extract original family number and protein ID and the XP in C. virginica it hit to
-   # can use cut to take out field 2 and 5
-
-  $ cut -d',' -f 2,5 virginica_exp_NOT_virginica_xml_combined_Cvir_hit.csv > virginica_exp_NOT_virginica_xml_combined_Cvir_hit_shortened.txt
-  $ cut -d',' -f 2,5 virginica_con_NOT_virginica_xml_combined_Cvir_hit.csv > virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened.txt
-  $ cut -d',' -f 2,5 shared_exp_NOT_virginica_xml_combined_Cvir_hit.csv > shared_exp_NOT_virginica_xml_combined_Cvir_hit_shortened.txt
-  $ cut -d',' -f 2,5 shared_con_NOT_virginica_xml_combined_Cvir_hit.csv > shared_con_NOT_virginica_xml_combined_Cvir_hit_shortened.txt
-
-      # the first column here is the original name and the second column is the best hit in C. virginica
-
-  # Issue: Many share the same best hit, going to deal with it later! Make a new column that concatenates the shared column one information
-    # found stackoverflow answer where the ID is in the first column, going to switch and then try the solution below
-    https://stackoverflow.com/questions/19823941/join-lines-with-the-same-value-in-the-first-column
-      $ awk '{FS=","; print $2 "\t" $1}' virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened.txt > virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened_switched.txt
-      # this works great but the first line keeps having a glitch, so I'm going to go in and fix it myself
-
-      # use this next command to concatenate second column based on match in the first column
-      sort virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened_switched.txt \
-          | awk '
-          last==$1 { sub( /^[^[:blank:]]*[[:blank:]]+/, ""); C = C " " $0; next}
-          NR > 1 { print Last C; Last = $1; C = ""}
-          END { print Last}
-          '
-
-  # Get the positions of the match in the GFF3 file, while keeping this information.The family info is already there, so I don't need to add that after
-          input="./virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened.txt"
-          #THIS works, but there are lots of hits for each ID.
-
-          #!/bin/bash
-          #SBATCH --job-name="grep_reference"
-          #SBATCH --time=9999:00:00
-          #SBATCH --nodes=1
-          #SBATCH --ntasks-per-node=1
-          #SBATCH --cpus-per-task=20
-          #SBATCH --output="XP_non_cvir_grep_reference"
-          #SBATCH --error="XP_non_cvir_grep_reference_error"
-          #SBATCH --mail-user=erin_roberts@my.uri.edu
-
-          set -e
-          echo "START $(date)"
-
-          for i in $(cat virginica_con_NOT_virginica_xml_combined_Cvir_hit_shortened.txt); do
-              #searches for the matching protein IDs in the reference file, output the ID before and after to keep track of it
-              echo "$i $(echo "$i" | cut -d',' -f 2 | grep -f - /data3/marine_diseases_lab/shared/GCA_002022765.4_C_virginica-3.0_genomic.fna_index_reads/ref_C_virginica-3.0_top_level.gff3 | cut -f 1,4,5,9) $i" >> $input.positions
-              done
-
-########################### DONT NEED TO EVEN BE ANNOTATING THE NON C. VIRGINICA SEQUENCES ###########
-
-
-
-#### NOTES ON SPECIFIC FAMILIES ####
-1. shared_exp fam1212_exp.fa.NOT.virginica kept having a glitch where it was keeping the first line as sequence from a Cvir XP that should have been deleted...not sure why,
-other files do not seem to be affected. It got rid of >virginica_XP* line but kept the sequence line for some reason. Caused Diamond to throw error because
-it couldn't recognize the file as a Fasta file. Went into nano and deleted that sequence after checking it was a Cvir one. Running diamond again to
-see if other sequences throw the same error.
-
-2. The above error 1 kept happening and it had to do with my original awk command, changed it to a sed command that seems to be working to remove the
-line that says "virginica" and then one line after it!
-
-
-################## PUTTING ALL THIS OUTPUT INTO A BED FORMAT FILE ###################3
-
-  #5. Make a csv file with the following track lines that lists in this order, CHR, chrStart, chrEnd, name of feature
-
-  # Use the files that were downloaded above from bluewaves
-
-  #BED file color scheme:
-    -RED=contracted Families
-    -GREEN= expanded families
-    -BLUE = shared families, purple = shared contracted, light blue = shared expanded
-    -CORAL = all
-
-  Track Name lines:
-   -track name ="regular_size_virginica_exp" description="Virginica expanded" color="G" itemRgb="On"
-   -track name ="regular_size_virginica_con" description="Virginica contracted" color="R" itemRgb="On"
-   -track name ="regular_size_shared_con" description="Shared contracted" color="#9932CC" itemRgb="On"
-   -track name ="regular_size_shared_exp" description="Shared expanded color="#6495ED" itemRgb="On"
-   -track name ="all_shared_virginica" description="all shared virginica" color="#FF7F50" itemRgb="On"
-
-# 2. Convert Combined file for each protein family to a BED file that can be downloaded
-
-  # Use this BLAST_to_BED script
-  https://github.com/mojaveazure/BLAST_to_BED
-  # Use bedtools merge to combine the bed tools https://bedtools.readthedocs.io/en/latest/content/tools/merge.html
-
-  # bedtools merge requires that you presort your data by chromosome and then
-  by start position (e.g., sort -k1,1 -k2,2n in.bed > in.sorted.bed for BED files).
-  # Bed tools only merges overlapping or bookended features in a file
-
-  $ bedtools merge [OPTIONS] -i <BED/GFF/VCF/BAM>
-    # Useful arguments:
-      -S reports the intervals that were merged
-      -n reports the number of features that were merged
+#### SCRAP SCRIPT ######
+## wasn't used to make final pipeline:...removing XP? $ for file in *.fa.virginica; do filename=${file%.fa.virginica};   sed -i -e "/XP/ s/\$/_$filename/" "$file"; done
