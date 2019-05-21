@@ -201,3 +201,10 @@ the regular_size_virginica_con and regular_size_virginica_exp
 
 #### SCRAP SCRIPT ######
 ## wasn't used to make final pipeline:...removing XP? $ for file in *.fa.virginica; do filename=${file%.fa.virginica};   sed -i -e "/XP/ s/\$/_$filename/" "$file"; done
+
+
+#### MISTAKE FOUND WITH SEPARATING TO COLUMN #####
+
+  # saw when I loaded all the tracks to github it looked like some of the columns were separated by a space and not by a tab
+
+  # the files open in IGV perfectly however and seem to not be missing those sections 
